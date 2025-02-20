@@ -24,12 +24,13 @@ public class Color {
 		b = blue;
 	}
 
+	/** returns the color black */
 	public static Color off() {
 		return new Color(0, 0, 0);
 	}
 
 	@Override
 	public String toString() {
-		return "(" + r + "," + g + "," + b + ")";
+		return "(" + r + ", " + g + ", " + b + ")";
 	}
 }

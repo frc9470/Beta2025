@@ -26,11 +26,14 @@ public class LEDs extends SubsystemBase {
         return mInstance;
     }
 
+    // TODO: verify if we actually have this many LEDs
     private final int kNumLeds = 300;
 
     private boolean mDisabled = false;
     private final CANdle mCandle = new CANdle(Ports.CANdle.getDeviceNumber(), Ports.CANdle.getBus());
     private LEDSection mLEDStatus = new LEDSection(0, kNumLeds);
+
+    public boolean hasCoral = false;
 
     public LEDs() {
         CANdleConfiguration configAll = new CANdleConfiguration();
@@ -53,6 +56,7 @@ public class LEDs extends SubsystemBase {
     }
 
     public void readPeriodicInputs() {
+        /** setting specific states */
         if (mDisabled) {
             if (!Vision.getInstance().isFullyConnected()) {
                 applyStates(TimedLEDState.NO_VISION);
@@ -63,9 +67,21 @@ public class LEDs extends SubsystemBase {
                     applyStates(TimedLEDState.DISABLE_BLUE);
                 }
             }
+        } else {
+            if (hasCoral) {
+                applyStates(TimedLEDState.HAS_CORAL);
+            } else {
+                applyStates(TimedLEDState.NO_CORAL);
+            }
         }
 
+        // TODO: should this be wrapped in an else statement?
+
+        /** setting LEDs based on the state */
+
         double timestamp = Timer.getFPGATimestamp();
+        
+        // TODO: consider moving to a function within LEDSection?
         if (mLEDStatus.state.interval != Double.POSITIVE_INFINITY) {
             if (timestamp - mLEDStatus.lastSwitchTime >= mLEDStatus.state.interval) {
                 mLEDStatus.nextColor();
@@ -73,6 +89,7 @@ public class LEDs extends SubsystemBase {
             }
         }
 
+        // TODO: also consider moving to within LEDSection
         Color color = mLEDStatus.getWantedColor();
         mCandle.setLEDs(color.r, color.g, color.b, 0, mLEDStatus.startIDx, 100);
     }
@@ -111,12 +128,14 @@ public class LEDs extends SubsystemBase {
     // Class for holding information about each section
     private class LEDSection {
         private TimedLEDState state = TimedLEDState.OFF; // current TimedState
-        private double lastSwitchTime = 0.0; // timestampe of last color cycle
+        private double lastSwitchTime = 0.0; // timestamp of last color cycle
         private int colorIndex = 0; // tracks current color in array
         private int startIDx, LEDCount; // start and end of section
 
         public LEDSection(int startIndex, int endIndex) {
             startIDx = startIndex;
+            
+            // TODO: what does this line of code do
             LEDCount = endIndex - startIndex;
         }
 
@@ -133,6 +152,7 @@ public class LEDs extends SubsystemBase {
             try {
                 color = state.colors[colorIndex];
             } catch (Exception e) {
+                // TODO: replace with N/A enum? what if color.off is a requested color
                 color = Color.off();
             }
             return color;
@@ -143,13 +163,19 @@ public class LEDs extends SubsystemBase {
             if (state.colors.length == 1) {
                 return;
             }
+
+            /* looping logic */
             if (colorIndex == state.colors.length - 1) {
                 colorIndex = 0;
+            
             } else {
                 colorIndex++;
             }
         }
 
+        // TODO: is this used?
+
+        /** resets class to "factory" settings */
         public void reset() {
             state = TimedLEDState.OFF;
             lastSwitchTime = 0.0;
