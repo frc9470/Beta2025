@@ -34,6 +34,7 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.units.measure.LinearVelocity;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Notifier;
@@ -48,8 +49,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-import static edu.wpi.first.units.Units.Second;
-import static edu.wpi.first.units.Units.Volts;
+import static edu.wpi.first.units.Units.*;
+import static edu.wpi.first.units.Units.MetersPerSecond;
 
 
 /**
@@ -68,6 +69,16 @@ public class Swerve extends TunerSwerveDrivetrain implements Subsystem {
 //            new LoggedTunableNumber("RobotState/MinDistanceTagPoseBlend", Units.inchesToMeters(24.0));
 //    private static final LoggedTunableNumber maxDistanceTagPoseBlend =
 //            new LoggedTunableNumber("RobotState/MaxDistanceTagPoseBlend", Units.inchesToMeters(36.0));
+
+    // TODO: make a constant
+    public static final LinearVelocity OrigMaxSpeed = FeetPerSecond.of(16.16);
+    public static double AdjustedMaxSpeed = OrigMaxSpeed.in(MetersPerSecond);
+
+    public static void adjustMaxSpeed(double scalingFactor) {
+        AdjustedMaxSpeed = FeetPerSecond.of(
+                OrigMaxSpeed.in(FeetPerSecond) * scalingFactor
+        ).in(MetersPerSecond);
+    }
 
     public static final double minDistanceTagPoseBlend = Units.inchesToMeters(24.0);
     public static final double maxDistanceTagPoseBlend = Units.inchesToMeters(36.0);

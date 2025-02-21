@@ -19,6 +19,7 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import static edu.wpi.first.units.Units.*;
 
 public class RobotContainer {
+
     private final double MaxSpeed = TunerConstants.kSpeedAt12Volts.in(MetersPerSecond);
     private final double MaxAngularRate = RotationsPerSecond.of(0.75).in(RadiansPerSecond);
 
@@ -65,8 +66,8 @@ public class RobotContainer {
 
         drivetrain.setDefaultCommand(
                 drivetrain.applyRequest(() ->
-                        drive.withVelocityX(-xbox.getLeftY() * MaxSpeed)
-                                .withVelocityY(-xbox.getLeftX() * MaxSpeed)
+                        drive.withVelocityX(-xbox.getLeftY() * Math.min(MaxSpeed,Swerve.AdjustedMaxSpeed))
+                                .withVelocityY(-xbox.getLeftX() * Math.min(MaxSpeed,Swerve.AdjustedMaxSpeed))
                                 .withRotationalRate(-xbox.getRightX() * MaxAngularRate)
                 )
         );

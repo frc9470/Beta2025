@@ -11,6 +11,7 @@ import com.team254.lib.drivers.TalonUtil;
 import com.team9470.Constants;
 import com.team9470.Constants.ElevatorConstants;
 import com.team9470.Ports;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.measure.*;
 import edu.wpi.first.wpilibj.RobotController;
@@ -127,6 +128,7 @@ public class Elevator extends SubsystemBase {
     }
 
     public Elevator(Mechanism2d mechanism) {
+
         elevatorMotor = TalonFXFactory.createDefaultTalon(Ports.ELEVATOR_MAIN);
         elevatorMotorFollower = TalonFXFactory.createPermanentFollowerTalon(
                 Ports.ELEVATOR_FOLLOWER, Ports.ELEVATOR_MAIN, true);
@@ -184,6 +186,22 @@ public class Elevator extends SubsystemBase {
 
         // 4) Log data to SmartDashboard (or any other telemetry sink)
         logTelemetry();
+
+        // 5) update drivetrain max speed based on elevator height
+        // in case elevator does a funny and goes above the theoretical maximum limit (or below zero?!)
+        double currentPosition = MathUtil.clamp(
+                        getPosition().in(Meters),
+                        ElevatorConstants.HOME_POSITION.in(Meters),
+                        ElevatorConstants.L4.in(Meters)
+        );
+
+        // velocity scaling factor -- basically "how much more" of the max elevator height the robot can go up to
+        double scaleFactor = 1.0 - (currentPosition / ElevatorConstants.L4.in(Meters));
+        // exponent for smoother scaling
+        scaleFactor = Math.pow(scaleFactor, 1.5);
+
+        // actually scale the maxspeed
+        Swerve.adjustMaxSpeed(Swerve.OrigMaxSpeed.in(FeetPerSecond) / scaleFactor);
     }
 
     public void simulationPeriodic() {
