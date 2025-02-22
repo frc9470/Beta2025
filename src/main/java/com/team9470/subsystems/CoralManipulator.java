@@ -5,6 +5,7 @@ import com.team254.lib.drivers.TalonFXFactory;
 import com.team254.lib.util.DelayedBoolean;
 import com.team9470.Constants.CoralConstants;
 import com.team9470.Ports;
+import com.team9470.subsystems.LEDs;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -27,13 +28,17 @@ public class CoralManipulator extends SubsystemBase {
     private final DigitalInput coralSensor = new DigitalInput(Ports.CORAL_BREAK);
     private final DelayedBoolean coralBreak = new DelayedBoolean(Timer.getFPGATimestamp(), CoralConstants.BREAK_TIMEOUT, sensorTrue());
 
-    public CoralManipulator() {
+    // gets LEDs singleton
+    
 
+    public CoralManipulator() {
         setDefaultCommand(coastUnless());
     }
 
     @Override
     public void periodic() {
+        LEDs.getInstance().hasCoral = hasCoral();
+
         coralBreak.update(Timer.getFPGATimestamp(), sensorTrue());
         if(!hasCoral())
             funnelMotor.setVoltage(CoralConstants.FUNNEL_SPEED.in(Volts));
@@ -41,9 +46,6 @@ public class CoralManipulator extends SubsystemBase {
 
         SmartDashboard.putBoolean("CoralManipulator/BeamBreak", sensorTrue());
         SmartDashboard.putBoolean("CoralManipulator/HasCoral", hasCoral());
-
-
-
     }
 
     // it works!
