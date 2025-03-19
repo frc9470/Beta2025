@@ -395,7 +395,7 @@ public class Autos extends SubsystemBase{
         return this.runEnd(
             () -> swerve.setChassisSpeeds(initial_speed),
             () -> swerve.setChassisSpeeds(final_speed)
-        );
+        ).withTimeout(1);
     }
 
 }
