@@ -11,6 +11,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
+import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.Volts;
 
 /**
@@ -31,6 +32,8 @@ public class CoralManipulator extends SubsystemBase {
     private final LEDs leds = LEDs.getInstance();
 
     public CoralManipulator() {
+        coralMotor.getConfigurator().apply(CoralConstants.getMotorConfig());
+        funnelMotor.getConfigurator().apply(CoralConstants.getMotorConfig());
         setDefaultCommand(coastUnless());
     }
 
@@ -38,11 +41,6 @@ public class CoralManipulator extends SubsystemBase {
     public void periodic() {
         // updates the delayed boolean with whether the coral is in the manipulator
         coralBreak.update(Timer.getFPGATimestamp(), sensorTrue());
-
-        // if there isn't coral, the funnel needs to be running to accept any incoming coral
-        if (!hasCoral()) funnelMotor.setVoltage(CoralConstants.FUNNEL_SPEED.in(Volts));
-            // if there is, great! stop the funnel, as it's not necessary
-        else funnelMotor.stopMotor();
 
         leds.hasCoral = sensorTrue();
 
@@ -80,8 +78,11 @@ public class CoralManipulator extends SubsystemBase {
         return this.run(() -> {
             if (hasCoral()) {
                 coralMotor.setVoltage(CoralConstants.HOLD_SPEED.in(Volts));
+                funnelMotor.stopMotor();
             } else {
                 coralMotor.setVoltage(CoralConstants.COAST_SPEED.in(Volts));
+                if (SmartDashboard.getNumber("Elevator/Position_m", 0) < CoralConstants.FUNNEL_SPEED_THRESHOLD.in(Meters))
+                    funnelMotor.setVoltage(CoralConstants.FUNNEL_SPEED.in(Volts));
             }
         });
     }
@@ -113,6 +114,15 @@ public class CoralManipulator extends SubsystemBase {
             () -> coralMotor.setVoltage(-CoralConstants.TAKE_IN_SPEED.in(Volts))
             // brakes the motor at the end, so the coral doesn't just end up misaligning but in reverse
             , coralMotor::stopMotor
+        );
+    }
+
+    public Command scoreAndFunnel() {
+        return this.run(
+                () -> {
+                    coralMotor.setVoltage(CoralConstants.TAKE_IN_SPEED.in(Volts));
+                    funnelMotor.setVoltage(CoralConstants.FUNNEL_SPEED.in(Volts));
+                }
         );
     }
 }

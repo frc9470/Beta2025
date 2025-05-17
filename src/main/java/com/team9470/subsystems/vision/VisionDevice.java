@@ -13,6 +13,8 @@ import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
@@ -29,7 +31,6 @@ public class VisionDevice {
     // private static final AprilTagFieldLayout aprilTagFieldLayout = AprilTagFields.k2024Crescendo.loadAprilTagLayoutField();
     private static final AprilTagFieldLayout aprilTagFieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
 
-    private final PhotonPoseEstimator secondPoseEstimator;
 
     public VisionDevice(String name, Transform3d transform) {
         this.photonCamera = new PhotonCamera(name);
@@ -38,13 +39,9 @@ public class VisionDevice {
                 PhotonPoseEstimator.PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR,
                 transform
         );
+
         photonPoseEstimator.setMultiTagFallbackStrategy(PhotonPoseEstimator.PoseStrategy.LOWEST_AMBIGUITY);
 
-        secondPoseEstimator = new PhotonPoseEstimator(
-                aprilTagFieldLayout,
-                PhotonPoseEstimator.PoseStrategy.PNP_DISTANCE_TRIG_SOLVE,
-                transform
-        );
 
     }
 
@@ -56,9 +53,14 @@ public class VisionDevice {
 
         List<PhotonPipelineResult> results = photonCamera.getAllUnreadResults();
         SmartDashboard.putNumber("Vision/" + photonCamera.getName() + "/results", results.size());
+
+        photonPoseEstimator.addHeadingData(Timer.getFPGATimestamp(), swerve.getPose().getRotation());
         for (PhotonPipelineResult result : results) {
 //            PhotonPipelineResult result = photonCamera.getLatestResult();
-            Optional<EstimatedRobotPose> posEstimate = photonPoseEstimator.update(result);
+            Optional<EstimatedRobotPose> posEstimate = photonPoseEstimator.update(result,
+                    photonCamera.getCameraMatrix(),
+                    photonCamera.getDistCoeffs(),
+                    Optional.of(new PhotonPoseEstimator.ConstrainedSolvepnpParams(DriverStation.isDisabled(), 1)));
             if (posEstimate.isEmpty()) {
                 return;
             }
@@ -110,17 +112,6 @@ public class VisionDevice {
 
 //        logRotation(rotationDegrees);
 
-            // tx, ty
-            secondPoseEstimator.addHeadingData(timestamp, robotPose.getRotation());
-            Optional<EstimatedRobotPose> singleTagEstimate = secondPoseEstimator.update(result);
-            if(singleTagEstimate.isEmpty()) return;
-            EstimatedRobotPose singleTagPose = singleTagEstimate.get();
-            PhotonTrackedTarget target = result.getTargets().get(0);
-
-            swerve.addTxTyPoseRecord(target.getFiducialId(),
-                            singleTagPose.estimatedPose.toPose2d(),
-                            target.getBestCameraToTarget().getTranslation().getNorm(),
-                            timestamp);
 
         }
     }

@@ -28,7 +28,6 @@ public class AlgaeArm extends SubsystemBase {
 
     // --- Hardware ---
     private final TalonFX pivotMotor;
-    private final TalonFX rollerMotor;
 
     // --- Control objects ---
     // Use MotionMagic for smooth motion to a target angle.
@@ -88,11 +87,9 @@ public class AlgaeArm extends SubsystemBase {
     public AlgaeArm(MechanismLigament2d mechanism) {
         // Create the pivot and roller TalonFX instances.
         pivotMotor = TalonFXFactory.createDefaultTalon(Ports.ALGAE_PIVOT);
-        rollerMotor = TalonFXFactory.createDefaultTalon(Ports.ALGAE_ROLLER);
 
         // Apply configuration (using your constant-provided configurations).
         TalonUtil.applyAndCheckConfiguration(pivotMotor, AlgaeConstants.getPivotConfig());
-        TalonUtil.applyAndCheckConfiguration(rollerMotor, AlgaeConstants.getRollerConfig());
 
         // Set up sensor status signals (refresh at 50 Hz with 0.1 sec latency tolerance).
         Frequency refreshRate = Hertz.of(50);
@@ -203,7 +200,7 @@ public class AlgaeArm extends SubsystemBase {
             case IDLE:
                 // Example: if the arm is near its target (and a timeout has passed), start homing.
                 boolean timeOut = periodicIO.timestamp.minus(homingStartTime).gt(AlgaeConstants.HOMING_TIMEOUT);
-                if (AlgaeConstants.STOW_UP.isNear(periodicIO.position, Degrees.of(5)) && timeOut) {
+                if (AlgaeConstants.HOMING_ANGLE.isNear(periodicIO.position, Degrees.of(5)) && timeOut) {
                     homingState = HomingState.HOMING;
                     homingStartTime = periodicIO.timestamp;
                 }
@@ -257,10 +254,6 @@ public class AlgaeArm extends SubsystemBase {
         SmartDashboard.putString("AlgaeArm/HomingState", periodicIO.homingState.toString());
         SmartDashboard.putNumber("AlgaeArm/Goal_deg", periodicIO.goal.in(Degrees));
         SmartDashboard.putNumber("AlgaeArm/Setpoint_deg", periodicIO.setpointAngle.in(Degrees));
-        // Also log roller motor current for algae detection.
-        SmartDashboard.putNumber("AlgaeArm/RollerCurrent_A", rollerMotor.getStatorCurrent().asSupplier().get().in(Amps));
-        SmartDashboard.putBoolean("AlgaeArm/HasAlgae", hasAlgae());
-
     }
 
     // --- Public Methods ---
@@ -285,34 +278,7 @@ public class AlgaeArm extends SubsystemBase {
         return periodicIO.current;
     }
 
-    /** Get the roller motor current. */
-    public Current getRollerCurrent() {
-        return rollerMotor.getStatorCurrent().asSupplier().get();
-    }
 
-    /**
-     * Returns true if the arm is in a position that would block the CoralManipulator.
-     * (Assumes AlgaeConstants.CORAL_THRESHOLD is specified as an Angle.)
-     */
-    public boolean isBlockingCoralManipulator() {
-        return getAngle().gte(AlgaeConstants.CORAL_THRESHOLD);
-    }
-
-    /**
-     * Returns true if the roller current indicates algae are in contact.
-     */
-    public boolean hasAlgae() {
-        return getRollerCurrent().gte(AlgaeConstants.ALGAE_IN_THRESHOLD);
-    }
-
-    public boolean notAlgae() {
-        return getRollerCurrent().gte(AlgaeConstants.ALGAE_IN_THRESHOLD);
-    }
-
-    /** Set the roller motor speed (using a VoltageOut control). */
-    public void setRollerSpeed(Voltage volts) {
-        rollerMotor.setControl(new VoltageOut(volts));
-    }
 
     public void triggerHoming() {
         needsHoming = true;
@@ -359,33 +325,13 @@ public class AlgaeArm extends SubsystemBase {
         };
     }
 
-    public Command deploy() {
-        return getMoveToAngleCommand(AlgaeConstants.DEPLOY_ANGLE);
-    }
 
-    public Command groundDeploy(){
-        return getMoveToAngleCommand(AlgaeConstants.GROUND_ANGLE);
-    }
-
-    public Command stow() {
+    public Command up(){
         return getMoveToAngleCommand(AlgaeConstants.STOW_UP);
     }
 
-    public Command stowDown() {
+    public Command down() {
         return getMoveToAngleCommand(AlgaeConstants.STOW_DOWN);
     }
 
-
-    public Command spin() {
-        return runEnd(
-                () -> setRollerSpeed(AlgaeConstants.INTAKE_OUTPUT),
-                () -> setRollerSpeed(AlgaeConstants.HOLDING_OUTPUT.unaryMinus())
-        );
-    }
-    public Command reverse() {
-        return runEnd(
-                () -> setRollerSpeed(AlgaeConstants.INTAKE_OUTPUT.unaryMinus()),
-                () -> setRollerSpeed(AlgaeConstants.HOLDING_OUTPUT)
-        );
-    }
 }

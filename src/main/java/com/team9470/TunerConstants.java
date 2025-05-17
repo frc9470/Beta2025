@@ -42,7 +42,7 @@ public class TunerConstants {
     // When using closed-loop control, the drive motor uses the control
     // output type specified by SwerveModuleConstants.DriveMotorClosedLoopOutput
     private static final Slot0Configs driveGains = new Slot0Configs()
-            .withKP(0.17442).withKI(0).withKD(0)
+            .withKP(0.3).withKI(0).withKD(0)
             .withKS(0).withKV(0.12352);
     // The closed-loop output type to use for the steer motors;
     // This affects the PID/FF gains for the steer motors
@@ -121,8 +121,8 @@ public class TunerConstants {
 
 
     // pathfinding constraints
-    public static final double maxVelocity = kSpeedAt12Volts.in(MetersPerSecond)/2;
-    public static final double maxAcceleration = 9.812/2;
+    public static final double maxVelocity = kSpeedAt12Volts.in(MetersPerSecond)*.6;
+    public static final double maxAcceleration = 9.812;
     public static final double maxAngularVelocity = 572.96; // degrees
     public static final double maxAngularAcceleration = 2480.33; // degrees
 

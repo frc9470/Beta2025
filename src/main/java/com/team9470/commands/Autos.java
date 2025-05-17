@@ -5,15 +5,15 @@ import choreo.auto.AutoRoutine;
 import choreo.auto.AutoTrajectory;
 import com.team9470.subsystems.*;
 import com.team9470.util.AllianceFlipUtil;
-import com.team9470.util.LogUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.InstantCommand;
-import edu.wpi.first.wpilibj2.command.WaitCommand;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.*;
+
+import java.util.Set;
+
+import static edu.wpi.first.units.Units.Degrees;
 
 public class Autos extends SubsystemBase{
     private final AutoFactory autoFactory;
@@ -34,6 +34,7 @@ public class Autos extends SubsystemBase{
     }
 
     public static final double SCORING_DELAY = 0.3;
+    public static final double INTAKE_DELAY = 0.3;
     private static final double ELEVATOR_DELAY = 0.7;
 
     public Command scoreL4(){
@@ -57,324 +58,49 @@ public class Autos extends SubsystemBase{
     }
 
     public Command scoreL4AutoWaitLower(Command driveAway, double delay, int branchID){
-        return AutoScoring.autoScoreWithTimeout(superstructure, new AutoScoring.CoralObjective(branchID, 4), swerve, SCORING_DELAY).andThen(driveAway
+        return AutoScoring.autoScoreWithTimeout(superstructure, new AutoScoring.CoralObjective(branchID, 4), swerve).andThen(driveAway
                 .alongWith(
                         new WaitCommand(delay).andThen(elevator.L0())
                 ));
     }
 
-    public Command alignToSourceAndWait() {
-        Pose2d sourcePose = AllianceFlipUtil.apply(
-                new Pose2d(1.629029631614685, 7.376053314208984, Rotation2d.fromDegrees(-54))
+    public Pose2d getSourcePose(boolean top){
+        return AllianceFlipUtil.apply(
+                top ? new Pose2d(1.52, 7.35, Rotation2d.fromDegrees(-54)) : new Pose2d(1.45, 0.73, Rotation2d.fromDegrees(54))
         );
+    }
 
-        return new DriveToPose(() -> sourcePose, swerve)/*.withDeadline(superstructure.waitForIntake())*/;
+    public Command alignToSource(boolean top) {
+
+        return new DriveToPose(() -> getSourcePose(top), swerve, true, 3).raceWith(superstructure.waitForIntake());
+    }
+
+    public Command alignToSourceWait(boolean top){
+        return new DriveToPose(() -> getSourcePose(top), swerve, true, 10)
+                .andThen(superstructure.waitForIntake().deadlineFor(new DriveToPose(() -> getSourcePose(top), swerve, true, -1)));
+
     }
 
     public Command scoreCoral() {
         return coralManipulator.scoreCommand();
     }
 
-    public AutoRoutine getBottomThreeCoralTest() {
-        AutoRoutine routine = autoFactory.newRoutine("B3C Test");
-
-        // Trajectories
-        AutoTrajectory startToC5 = routine.trajectory("S-5");
-        AutoTrajectory C5toSource = routine.trajectory("BC-5", 1);
-        AutoTrajectory toC7 = routine.trajectory("BC-7", 0);
-        AutoTrajectory C7toSource = routine.trajectory("BC-7", 1);
-        AutoTrajectory toC8 = routine.trajectory("BC-8", 0);
-        AutoTrajectory C8toSource = routine.trajectory("BC-8", 1);
-
-        routine.active().onTrue(
-                Commands.sequence(
-                        startToC5.resetOdometry(),
-                        startToC5.cmd()
-                )
-        );
-
-        startToC5.atTimeBeforeEnd(ELEVATOR_DELAY).onTrue(
-                elevator.L4()
-        );
-
-        startToC5.done().onTrue(
-                scoreL4WaitLower(C5toSource.cmd(), SCORING_DELAY)
-        );
-
-        C5toSource.done().onTrue(
-                superstructure.waitForIntake().andThen(toC7.cmd())
-        );
-
-        toC7.atTimeBeforeEnd(ELEVATOR_DELAY).onTrue(
-                elevator.L4()
-        );
-
-        toC7.done().onTrue(
-                scoreL4WaitLower(C7toSource.cmd(), SCORING_DELAY)
-        );
-
-        C7toSource.done().onTrue(
-                superstructure.waitForIntake().andThen(toC8.cmd())
-        );
-
-        toC8.atTimeBeforeEnd(ELEVATOR_DELAY).onTrue(
-                elevator.L4()
-        );
-
-        toC8.done().onTrue(
-                scoreL4WaitLower(C8toSource.cmd(), SCORING_DELAY)
-        );
-
-        return routine;
-    }
-
-    public AutoRoutine getThreeCoralTop() {
-        AutoRoutine routine = autoFactory.newRoutine("3CT Test");
-
-
-        // Trajectories
-        AutoTrajectory startToC1 = routine.trajectory("S-1");
-        AutoTrajectory C1toSource = routine.trajectory("TC-1", 1);
-        AutoTrajectory toC12 = routine.trajectory("TC-12", 0);
-        AutoTrajectory C12toSource = routine.trajectory("TC-12", 1);
-        AutoTrajectory toC11 = routine.trajectory("TC-11", 0);
-        AutoTrajectory C11toSource = routine.trajectory("TC-11", 1);
-        AutoTrajectory toC10 = routine.trajectory("TC-10", 0);
-
-        LogUtil.recordPose2d("autostart", startToC1.getInitialPose().get());
-
-        routine.active().onTrue(
-                Commands.sequence(
-                        startToC1.resetOdometry(),
-                        startToC1.cmd()
-                )
-        );
-
-        startToC1.atTimeBeforeEnd(ELEVATOR_DELAY).onTrue(
-                elevator.L4()
-        );
-
-        startToC1.done().onTrue(
-                scoreL4WaitLower(C1toSource.cmd(), SCORING_DELAY)
-        );
-
-        C1toSource.done().onTrue(
-                superstructure.waitForIntake().andThen(toC12.cmd())
-        );
-
-        toC12.atTimeBeforeEnd(ELEVATOR_DELAY).onTrue(
-                elevator.L4()
-        );
-
-
-        toC12.done().onTrue(
-                scoreL4WaitLower(C12toSource.cmd(), SCORING_DELAY)
-        );
-
-        C12toSource.done().onTrue(
-                superstructure.waitForIntake().andThen(toC11.cmd())
-        );
-
-        toC11.atTimeBeforeEnd(ELEVATOR_DELAY).onTrue(
-                elevator.L4()
-        );
-
-        toC11.done().onTrue(
-                scoreL4WaitLower(C11toSource.cmd(), SCORING_DELAY)
-        );
-
-        C11toSource.done().onTrue(
-                superstructure.waitForIntake().andThen(toC10.cmd())
-        );
-
-        toC10.done().onTrue(
-            scoreL4()
-        );
-
-        return routine;
-    }
-
-    public AutoRoutine getThreeCoralTopAutoAlign() {
-        AutoRoutine routine = autoFactory.newRoutine("3CTA");
-
-        // Trajectories
-        AutoTrajectory startToC1 = routine.trajectory("S-1");
-        AutoTrajectory C1toSource = routine.trajectory("TC-1", 1);
-        AutoTrajectory toC12 = routine.trajectory("TC-12", 0);
-        AutoTrajectory C12toSource = routine.trajectory("TC-12", 1);
-        AutoTrajectory toC11 = routine.trajectory("TC-11", 0);
-        AutoTrajectory C11toSource = routine.trajectory("TC-11", 1);
-        AutoTrajectory toC10 = routine.trajectory("TC-10", 0);
-
-        LogUtil.recordPose2d("autostart", startToC1.getInitialPose().get());
-
-        routine.active().onTrue(
-                Commands.sequence(
-                        startToC1.resetOdometry(),
-                        startToC1.cmd()
-                )
-        );
-
-        startToC1.atTimeBeforeEnd(ELEVATOR_DELAY).onTrue(
-                elevator.L4()
-        );
-
-        startToC1.done().onTrue(
-                scoreL4AutoWaitLower(C1toSource.cmd(), SCORING_DELAY, 9)
-        );
-
-        C1toSource.done().onTrue(
-                superstructure.waitForIntake().andThen(toC12.cmd())
-        );
-
-        toC12.atTimeBeforeEnd(ELEVATOR_DELAY).onTrue(
-                elevator.L4()
-        );
-
-
-        toC12.done().onTrue(
-                scoreL4AutoWaitLower(C12toSource.cmd(), SCORING_DELAY, 10)
-        );
-
-        C12toSource.done().onTrue(
-                superstructure.waitForIntake().andThen(toC11.cmd())
-        );
-
-        toC11.atTimeBeforeEnd(ELEVATOR_DELAY).onTrue(
-                elevator.L4()
-        );
-
-        toC11.done().onTrue(
-                scoreL4AutoWaitLower(C11toSource.cmd(), SCORING_DELAY, 11)
-        );
-
-        C11toSource.done().onTrue(
-                superstructure.waitForIntake().andThen(toC10.cmd())
-        );
-
-        toC10.done().onTrue(
-                scoreL4AutoWaitLower(new InstantCommand(), SCORING_DELAY, 0)
-        );
-
-        return routine;
-    }
-
-    public AutoRoutine getThreeCoralBottomAutoAlign() {
-        AutoRoutine routine = autoFactory.newRoutine("3CBA");
-
-        // Trajectories
-        AutoTrajectory startToC5 = routine.trajectory("S-5");
-        AutoTrajectory C5toSource = routine.trajectory("BC-5", 1);
-        AutoTrajectory toC7 = routine.trajectory("BC-7", 0);
-        AutoTrajectory C7toSource = routine.trajectory("BC-7", 1);
-        AutoTrajectory toC8 = routine.trajectory("BC-8", 0);
-        AutoTrajectory C8toSource = routine.trajectory("BC-8", 1);
-
-        LogUtil.recordPose2d("autostart", startToC5.getInitialPose().get());
-
-        routine.active().onTrue(
-                Commands.sequence(
-                        startToC5.resetOdometry(),
-                        startToC5.cmd()
-                )
-        );
-
-        startToC5.atTimeBeforeEnd(ELEVATOR_DELAY).onTrue(
-                elevator.L4()
-        );
-
-        startToC5.done().onTrue(
-                scoreL4AutoWaitLower(C5toSource.cmd(), SCORING_DELAY, 5)
-        );
-
-        C5toSource.done().onTrue(
-                superstructure.waitForIntake().andThen(toC7.cmd())
-        );
-
-        toC7.atTimeBeforeEnd(ELEVATOR_DELAY).onTrue(
-                elevator.L4()
-        );
-
-        toC7.done().onTrue(
-                scoreL4AutoWaitLower(C7toSource.cmd(), SCORING_DELAY, 3)
-        );
-
-        C7toSource.done().onTrue(
-                superstructure.waitForIntake().andThen(toC8.cmd())
-        );
-
-        toC8.atTimeBeforeEnd(ELEVATOR_DELAY).onTrue(
-                elevator.L4()
-        );
-
-        toC8.done().onTrue(
-                scoreL4AutoWaitLower(C8toSource.cmd(), SCORING_DELAY, 2)
-        );
-
-        return routine;
-    }
-
-
-
-    public AutoRoutine getThreeCoralTopAutoPathing() {
-        AutoRoutine routine = autoFactory.newRoutine("3CTP");
-
-        AutoTrajectory startToC1 = routine.trajectory("S-1");
-        AutoTrajectory C1back = routine.trajectory("TC-1", 1);
-        AutoTrajectory to11Score = routine.trajectory("SCORE 11 P");
-        AutoTrajectory to12Score = routine.trajectory("SCORE 12 P");
-        AutoTrajectory C11back = routine.trajectory("TC-11", 1);
-        AutoTrajectory C12back = routine.trajectory("TC-12", 1);
-
-
-        routine.active().onTrue(
-                Commands.sequence(
-                        startToC1.resetOdometry(),
-                        startToC1.cmd()
-                )
-        );
-
-        startToC1.atTimeBeforeEnd(ELEVATOR_DELAY).onTrue(
-                elevator.L4()
-        );
-        startToC1.done().onTrue(
-                scoreL4AutoWaitLower(C1back.cmd(), SCORING_DELAY, 9)
-        );
-
-        C1back.done().onTrue(
-                alignToSourceAndWait().andThen(to11Score.cmd())
-        );
-
-        to11Score.done().onTrue(
-                scoreL4AutoWaitLower(C11back.cmd(), SCORING_DELAY, 10)
-        );
-
-        C11back.done().onTrue(
-                alignToSourceAndWait().andThen(to12Score.cmd())
-        );
-
-        to12Score.done().onTrue(
-                scoreL4AutoWaitLower(new InstantCommand(), SCORING_DELAY, 11)
-        );
-        return routine;
-    }
-
-    public AutoRoutine getOneCoral(){
-        AutoRoutine routine = autoFactory.newRoutine("1C");
+    public AutoRoutine getOneCoralMiddleAutoNormal(){
+        AutoRoutine routine = autoFactory.newRoutine("1CMN");
 
         AutoTrajectory startToC3 = routine.trajectory("S-3");
         routine.active().onTrue(
                 startToC3.resetOdometry().andThen(
                         scoreL4AutoWaitLower(new InstantCommand(), SCORING_DELAY, 7)
+                                .andThen(superstructure.algaeDown())
                 )
 
         );
         return routine;
     }
 
-    // use when no vision
-    public AutoRoutine getOneCoralChoreo(){
-        AutoRoutine routine = autoFactory.newRoutine("1CC");
+    public AutoRoutine getOneCoralMiddleAutoChoreo(){
+        AutoRoutine routine = autoFactory.newRoutine("1CMC");
         AutoTrajectory startToC3 = routine.trajectory("S-3");
 
         routine.active().onTrue(
@@ -384,10 +110,142 @@ public class Autos extends SubsystemBase{
 
         startToC3.done().onTrue(
                 scoreL4WaitLower(new InstantCommand(), SCORING_DELAY)
+                        .andThen(superstructure.algaeDown())
         );
         return routine;
     }
 
+    public AutoRoutine getOneCoralMiddleAutoAlign(){
+        AutoRoutine routine = autoFactory.newRoutine("1CMA");
+
+        routine.active().onTrue(
+                AutoScoring.autoScoreWithTimeout(superstructure, new AutoScoring.CoralObjective(7, 4), swerve)
+                        .andThen(Commands.parallel(superstructure.algaeDown(), elevator.L0()))
+        );
+
+        return routine;
+    }
+    private static final Pose2d START_TOP = new Pose2d(new Translation2d(7, 5), new Rotation2d(Degrees.of(240)));
+    private static final Pose2d START_BOTTOM = new Pose2d(new Translation2d(7, 3), new Rotation2d(Degrees.of(120)));
+
+    public AutoRoutine getFiveCoralTopAutoAlign() {
+        AutoRoutine routine = autoFactory.newRoutine("5CTA");
+        // TODO: define odom start position and reset odometry to that position, analogous to "startToC5.resetOdometry()" choreo call
+
+        routine.active().onTrue(
+                Commands.sequence(
+                        AutoScoring.autoScoreStraight(superstructure, new AutoScoring.CoralObjective(9, 4), swerve),
+                        elevator.L0()
+                                .alongWith(algaeArm.up())
+                                .withDeadline(alignToSourceWait(true)),
+
+                        AutoScoring.autoScoreWithTimeout(superstructure, new AutoScoring.CoralObjective(10, 4), swerve),
+                        elevator.L0()
+                                .withDeadline(alignToSourceWait(true)),
+
+                        AutoScoring.autoScoreWithTimeout(superstructure, new AutoScoring.CoralObjective(11, 4), swerve),
+                        elevator.L0()
+                                .withDeadline(alignToSourceWait(true)),
+
+                        AutoScoring.autoScoreWithTimeout(superstructure, new AutoScoring.CoralObjective(11, 3), swerve),
+                        elevator.L0()
+                                .alongWith(algaeArm.down())
+                                .withDeadline(alignToSourceWait(true)),
+
+                        AutoScoring.autoScoreWithTimeout(superstructure, new AutoScoring.CoralObjective(10, 3), swerve)
+                )
+        );
+
+        return routine;
+    }
+
+    public AutoRoutine getFiveCoralBottomAutoAlign() {
+        AutoRoutine routine = autoFactory.newRoutine("5CBA");
+
+        routine.active().onTrue(
+                Commands.sequence(
+                        AutoScoring.autoScoreWithTimeout(superstructure, new AutoScoring.CoralObjective(4, 4), swerve),
+                        elevator.L0()
+                                .alongWith(algaeArm.up())
+                                .withDeadline(alignToSourceWait(false)),
+
+                        AutoScoring.autoScoreWithTimeout(superstructure, new AutoScoring.CoralObjective(3, 4), swerve),
+                        elevator.L0()
+                                .withDeadline(alignToSourceWait(false)),
+
+                        AutoScoring.autoScoreWithTimeout(superstructure, new AutoScoring.CoralObjective(2, 4), swerve),
+                        elevator.L0()
+                                .withDeadline(alignToSourceWait(false)),
+
+                        AutoScoring.autoScoreWithTimeout(superstructure, new AutoScoring.CoralObjective(2, 3), swerve),
+                        elevator.L0()
+                                .alongWith(algaeArm.down())
+                                .withDeadline(alignToSourceWait(false)),
+
+                        AutoScoring.autoScoreWithTimeout(superstructure, new AutoScoring.CoralObjective(3, 3), swerve)
+                )
+        );
+
+        return routine;
+    }
+
+    public AutoRoutine getFiveCoralTopAutoAlignNoWait() {
+        AutoRoutine routine = autoFactory.newRoutine("5CTA-NW");
+
+        routine.active().onTrue(
+                Commands.sequence(
+                        AutoScoring.autoScoreWithTimeout(superstructure, new AutoScoring.CoralObjective(9, 4), swerve),
+                        elevator.L0().alongWith(algaeArm.up())
+                                .withDeadline(alignToSource(true)),
+                        new WaitCommand(INTAKE_DELAY),
+                        AutoScoring.autoScoreWithTimeout(superstructure, new AutoScoring.CoralObjective(10, 4), swerve),
+                        elevator.L0().alongWith(algaeArm.down())
+                                .withDeadline(alignToSource(true)),
+                        new WaitCommand(INTAKE_DELAY),
+                        AutoScoring.autoScoreWithTimeout(superstructure, new AutoScoring.CoralObjective(11, 4), swerve),
+                        elevator.L0()
+                                .withDeadline(alignToSource(true)),
+                        new WaitCommand(INTAKE_DELAY),
+                        AutoScoring.autoScoreWithTimeout(superstructure, new AutoScoring.CoralObjective(11, 2), swerve),
+                        elevator.L0().alongWith(algaeArm.up())
+                                .withDeadline(alignToSource(true)),
+                        new WaitCommand(INTAKE_DELAY),
+                        AutoScoring.autoScoreWithTimeout(superstructure, new AutoScoring.CoralObjective(10, 2), swerve)
+                )
+        );
+
+        return routine;
+    }
+
+    public AutoRoutine getFiveCoralBottomAutoAlignNoWait() {
+        AutoRoutine routine = autoFactory.newRoutine("5CBA-NW");
+
+        routine.active().onTrue(
+                Commands.sequence(
+                        AutoScoring.autoScoreStraight(superstructure, new AutoScoring.CoralObjective(4, 4), swerve),
+                        elevator.L0().alongWith(algaeArm.up())
+                                .withDeadline(alignToSource(false)),
+                        new WaitCommand(INTAKE_DELAY),
+                        AutoScoring.autoScoreWithTimeout(superstructure, new AutoScoring.CoralObjective(3, 4), swerve),
+                        elevator.L0().alongWith(algaeArm.down())
+                                .withDeadline(alignToSource(false)),
+                        new WaitCommand(INTAKE_DELAY),
+                        AutoScoring.autoScoreWithTimeout(superstructure, new AutoScoring.CoralObjective(2, 4), swerve),
+                        elevator.L0()
+                                .withDeadline(alignToSource(false)),
+                        new WaitCommand(INTAKE_DELAY),
+                        AutoScoring.autoScoreWithTimeout(superstructure, new AutoScoring.CoralObjective(2, 3), swerve),
+                        elevator.L0().alongWith(algaeArm.up())
+                                .withDeadline(alignToSource(false)),
+                        new WaitCommand(INTAKE_DELAY),
+                        AutoScoring.autoScoreWithTimeout(superstructure, new AutoScoring.CoralObjective(3, 3), swerve)
+                )
+        );
+
+        return routine;
+    }
+
+    // basic leave auto
     public Command getBasicAutoCommand() {
         ChassisSpeeds initial_speed = new ChassisSpeeds(1, 0, 0);
         ChassisSpeeds final_speed = new ChassisSpeeds(0, 0, 0);

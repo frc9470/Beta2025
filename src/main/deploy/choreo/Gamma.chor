@@ -1,5 +1,5 @@
 {
- "name":"Beta",
+ "name":"Gamma",
  "version":1,
  "type":"Swerve",
  "variables":{
@@ -225,12 +225,12 @@
    }
   },
   "mass":{
-   "exp":"143 lbs",
-   "val":64.86370891
+   "exp":"133 lbs",
+   "val":60.32778521
   },
   "inertia":{
-   "exp":"6 kg m ^ 2",
-   "val":6.0
+   "exp":"5.7 kg m ^ 2",
+   "val":5.7
   },
   "gearing":{
    "exp":"6.48",
@@ -254,16 +254,16 @@
   },
   "bumper":{
    "front":{
-    "exp":"18.5 in",
-    "val":0.4699
+    "exp":"18 in",
+    "val":0.4572
    },
    "side":{
-    "exp":"18.5 in",
-    "val":0.4699
+    "exp":"18 in",
+    "val":0.4572
    },
    "back":{
-    "exp":"18.5 in",
-    "val":0.4699
+    "exp":"18 in",
+    "val":0.4572
    }
   },
   "differentialTrackWidth":{

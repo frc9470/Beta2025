@@ -62,7 +62,7 @@ public class Elevator extends SubsystemBase {
     private HomingState homingState = HomingState.IDLE;
 
     // Our "goal" position in meters
-    private Distance targetPosition = Meters.of(0);
+    private Distance targetPosition = L0;
 
     // Keep track of time when homing started
     private Time homingStartTime = Seconds.of(0);
@@ -271,7 +271,7 @@ public class Elevator extends SubsystemBase {
                 boolean timeOut = periodicIO.timestamp
                         .minus(homingStartTime)
                         .gt(ElevatorConstants.HOMING_TIMEOUT);
-                if (L0.isNear(periodicIO.positionMeters, Meters.of(0.01)) && timeOut) {
+                if (L0.isNear(periodicIO.positionMeters, Meters.of(0.02)) && timeOut) {
                     homingState = HomingState.HOMING;
                     homingStartTime = periodicIO.timestamp;
                 }
@@ -396,7 +396,7 @@ public class Elevator extends SubsystemBase {
 
             @Override
             public boolean isFinished() {
-                return getPosition().isNear(position, Meters.of(0.02));
+                return getPosition().isNear(position, Meters.of(0.01));
             }
         };
     }
@@ -435,15 +435,6 @@ public class Elevator extends SubsystemBase {
     public Command L4(){
         return getMoveToPositionCommand(ElevatorConstants.L4);
     }
-
-    public Command algaeL2() {
-        return getMoveToPositionCommand(ElevatorConstants.AL2);
-    }
-
-    public Command algaeL3() {
-        return getMoveToPositionCommand(ElevatorConstants.AL3);
-    }
-
     public Command intake(){
         return getMoveToPositionCommand(ElevatorConstants.INTAKE);
     }

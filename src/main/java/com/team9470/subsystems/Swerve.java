@@ -6,6 +6,7 @@ import choreo.trajectory.SwerveSample;
 import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
+import com.ctre.phoenix6.swerve.SwerveModule;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 import com.pathplanner.lib.auto.AutoBuilder;
@@ -40,14 +41,13 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-import static edu.wpi.first.units.Units.Second;
-import static edu.wpi.first.units.Units.Volts;
-
+import static edu.wpi.first.units.Units.*;
 
 
 /**
@@ -67,8 +67,8 @@ public class Swerve extends TunerSwerveDrivetrain implements Subsystem {
 
     /* Swerve requests */
     private final SwerveRequest.ApplyFieldSpeeds    applyFieldSpeeds = new SwerveRequest.ApplyFieldSpeeds();
-    private final PIDController pathXController = new PIDController(10, 0, 0);
-    private final PIDController pathYController = new PIDController(10, 0, 0);
+    private final PIDController pathXController = new PIDController(7, 0, 0);
+    private final PIDController pathYController = new PIDController(7, 0, 0);
     private final PIDController pathThetaController = new PIDController(7, 0, 0);
     /* Swerve requests to apply during SysId characterization */
     private final SwerveRequest.SysIdSwerveTranslation translationCharacterization = new SwerveRequest.SysIdSwerveTranslation();
@@ -107,7 +107,7 @@ public class Swerve extends TunerSwerveDrivetrain implements Subsystem {
             )
     );
     /* The SysId routine to test */
-    private final SysIdRoutine sysIdRoutineToApply = sysIdRoutineSteer;
+    private final SysIdRoutine sysIdRoutineToApply = sysIdRoutineTranslation;
     /*
      * SysId routine for characterizing rotation.
      * This is used to find PID gains for the FieldCentricFacingAngle HeadingController.
@@ -370,6 +370,10 @@ public class Swerve extends TunerSwerveDrivetrain implements Subsystem {
         return kinematics.toChassisSpeeds(moduleStates);
     }
 
+    public double[] getWheelRadiusCharacterizationPosition() {
+        return Arrays.stream(getModules()).mapToDouble((module) -> module.getPosition(true).distanceMeters/Units.inchesToMeters(2)).toArray();
+    }
+
     public static Swerve getInstance(){
         if(instance == null){
             instance = TunerConstants.createDrivetrain();
@@ -386,7 +390,7 @@ public class Swerve extends TunerSwerveDrivetrain implements Subsystem {
 
     @Override
     public void addVisionMeasurement(Pose2d visionRobotPoseMeters, double timestampSeconds, Matrix<N3, N1> visionMeasurementStdDevs) {
-        if (visionPoseAcceptor.shouldAcceptVision(timestampSeconds, visionRobotPoseMeters, getPose(), getRobotTwist(), DriverStation.isAutonomous())) {
+        if (visionPoseAcceptor.shouldAcceptVision(timestampSeconds, visionRobotPoseMeters, getPose(), getRobotTwist(), DriverStation.isAutonomous() && !DriverStation.isDisabled())) {
             super.addVisionMeasurement(visionRobotPoseMeters, timestampSeconds, visionMeasurementStdDevs);
         }
     }
@@ -407,6 +411,10 @@ public class Swerve extends TunerSwerveDrivetrain implements Subsystem {
 
     public static final double minDistanceTagPoseBlend = Units.inchesToMeters(24.0);
     public static final double maxDistanceTagPoseBlend = Units.inchesToMeters(36.0);
+    @Deprecated
+    /**
+     * chat lets not do 6328 code pretty please
+     */
     public Pose2d getReefPose(int face, Pose2d finalPose) {
         final boolean isRed = AllianceFlipUtil.shouldFlip();
         var tagPose =

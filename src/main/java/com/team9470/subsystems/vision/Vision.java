@@ -82,6 +82,10 @@ public class Vision extends SubsystemBase {
         devices.forEach(visionDevice -> visionDevice.updatePosition(Swerve.getInstance()));
     }
 
+
+
+
+
     @Override
     public void simulationPeriodic() {
         visionSim.update(Swerve.getInstance().getPose());
